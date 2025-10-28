@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Travel Wallet • TravelPlan</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <script src="js/auth.js"></script>
+</head>
+<body>
+  <nav class="topnav">
+    <div class="brand"><a href="index.html">TravelPlan</a></div>
+    <div class="nav-actions">
+      <a href="dashboard.html">Dashboard</a>
+      <a href="index.html">Sign Out</a>
+    </div>
+  </nav>
+
+  <main class="container">
+    <header class="page-header">
+      <h1><i class="fas fa-wallet"></i> Travel Wallet</h1>
+      <p>Track trip expenses and budgets. Entries are saved to the wallet.</p>
+    </header>
+
+    <section class="controls">
+      <input id="expenseTitle" placeholder="Expense title (Taxi, Dinner...)" />
+      <input id="expenseAmount" type="number" placeholder="Amount" />
+      <select id="expenseCurrency">
+        <option>USD</option>
+        <option>EUR</option>
+        <option>GBP</option>
+        <option>JPY</option>
+        <option>CAD</option>
+        <option>AUD</option>
+        <option>INR</option>
+      </select>
+      <button id="addExpenseBtn"><i class="fas fa-plus"></i> Add Expense</button>
+    </section>
+
+    <section id="walletList" class="card">
+      <h3><i class="fas fa-receipt"></i> Expenses</h3>
+      <div id="loading" class="loading-indicator" style="display: none;">Loading...</div>
+      <ul id="expenses" class="list"></ul>
+      <div class="muted" id="walletSummary">Total: 0</div>
+    </section>
+  </main>
+
+  <script src="js/navigation.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const expenseTitle = document.getElementById('expenseTitle');
+      const expenseAmount = document.getElementById('expenseAmount');
+      const expenseCurrency = document.getElementById('expenseCurrency');
+      const addExpenseBtn = document.getElementById('addExpenseBtn');
+      const expensesList = document.getElementById('expenses');
+      const walletSummary = document.getElementById('walletSummary');
+      const loadingIndicator = document.getElementById('loading');
+      
+      let expenses = [];
+      
+      // Load expenses from API or localStorage
+      function loadExpenses() {
+        loadingIndicator.style.display = 'block';
+        
+        // Try to fetch from API first
+        fetch('http://localhost:5001/api/wallet')
+          .then(response => response.json())
+          .then(data => {
+            expenses = data;
+            renderExpenses();
+            loadingIndicator.style.display = 'none';
+          })
+          .catch(error => {
+            console.error('Error fetching expenses:', error);
+            // Fallback to localStorage
+            const savedExpenses = localStorage.getItem('expenses');
+            if (savedExpenses) {
+              expenses = JSON.parse(savedExpenses);
+            }
+            renderExpenses();
+            loadingIndicator.style.display = 'none';
+          });
+      }
+      
+      // Render expenses list
+      function renderExpenses() {
+        expensesList.innerHTML = '';
+        let total = 0;
+        
+        if (expenses.length === 0) {
+          expensesList.innerHTML = '<li class="empty-state">No expenses added yet</li>';
+          walletSummary.textContent = 'Total: 0';
+          return;
+        }
+        
+        expenses.forEach((expense, index) => {
+          const li = document.createElement('li');
+          li.innerHTML = `
+            <span class="expense-title">${expense.title}</span>
+            <span class="expense-amount">${expense.currency} ${expense.amount}</span>
+            <button class="delete-btn" data-index="${index}"><i class="fas fa-trash"></i></button>
+          `;
+          expensesList.appendChild(li);
+          
+          // Simple conversion to USD for total (in real app would use exchange rates)
+          let amountInUSD = expense.amount;
+          if (expense.currency !== 'USD') {
+            // This is a simplified conversion
+            amountInUSD = expense.amount; // In real app, apply conversion rates
+          }
+          total += parseFloat(amountInUSD);
+        });
+        
+        walletSummary.textContent = `Total: $${total.toFixed(2)} USD`;
+        
+        // Add event listeners to delete buttons
+        document.querySelectorAll('.delete-btn').forEach(btn => {
+          btn.addEventListener('click', function() {
+            const index = this.getAttribute('data-index');
+            deleteExpense(index);
+          });
+        });
+      }
+      
+      // Add new expense
+      function addExpense() {
+        if (!expenseTitle.value || !expenseAmount.value) {
+          alert('Please enter both title and amount');
+          return;
+        }
+        
+        const newExpense = {
+          title: expenseTitle.value,
+          amount: parseFloat(expenseAmount.value),
+          currency: expenseCurrency.value,
+          date: new Date().toISOString()
+        };
+        
+        loadingIndicator.style.display = 'block';
+        
+        // Try to save to API
+        fetch('http://localhost:5001/api/wallet', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(newExpense)
+        })
+        .then(response => response.json())
+        .then(data => {
+          expenses.push(newExpense);
+          saveToLocalStorage();
+          renderExpenses();
+          clearForm();
+          loadingIndicator.style.display = 'none';
+        })
+        .catch(error => {
+          console.error('Error saving expense:', error);
+          // Fallback to localStorage only
+          expenses.push(newExpense);
+          saveToLocalStorage();
+          renderExpenses();
+          clearForm();
+          loadingIndicator.style.display = 'none';
+        });
+      }
+      
+      // Delete expense
+      function deleteExpense(index) {
+        const expenseId = expenses[index].id || index;
+        loadingIndicator.style.display = 'block';
+        
+        // Try to delete from API
+        fetch(`http://localhost:5001/api/wallet/${expenseId}`, {
+          method: 'DELETE'
+        })
+        .then(response => {
+          expenses.splice(index, 1);
+          saveToLocalStorage();
+          renderExpenses();
+          loadingIndicator.style.display = 'none';
+        })
+        .catch(error => {
+          console.error('Error deleting expense:', error);
+          // Fallback to localStorage only
+          expenses.splice(index, 1);
+          saveToLocalStorage();
+          renderExpenses();
+          loadingIndicator.style.display = 'none';
+        });
+      }
+      
+      // Save to localStorage as backup
+      function saveToLocalStorage() {
+        localStorage.setItem('expenses', JSON.stringify(expenses));
+      }
+      
+      // Clear form after adding expense
+      function clearForm() {
+        expenseTitle.value = '';
+        expenseAmount.value = '';
+        expenseTitle.focus();
+      }
+      
+      // Event listeners
+      addExpenseBtn.addEventListener('click', addExpense);
+      
+      // Allow pressing Enter to add expense
+      expenseAmount.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          addExpense();
+        }
+      });
+      
+      // Initialize
+      loadExpenses();
+    });
+  </script>
+</body>
+</html>

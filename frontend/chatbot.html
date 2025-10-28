@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>AI Chatbot Assistant • TravelPlan</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+</head>
+<body>
+  <header class="main-header"></header>
+
+  <main class="container">
+    <header class="page-header">
+      <h1><i class="fas fa-robot"></i> AI Chatbot Assistant</h1>
+      <p>Your personal travel guide — ask about itineraries, packing, visas and more.</p>
+    </header>
+
+    <section class="chatbox card">
+      <div id="chatLog" class="chat-log">
+        <!-- messages will appear here -->
+        <div class="message bot-message">
+          <div class="message-content">
+            <i class="fas fa-robot message-icon"></i>
+            <div class="message-text">Hello! I'm your travel assistant. How can I help you plan your trip today?</div>
+          </div>
+          <div class="message-time">Just now</div>
+        </div>
+      </div>
+
+      <div class="chat-controls">
+        <input id="userMessage" placeholder="Ask the assistant..." />
+        <button id="sendBtn"><i class="fas fa-paper-plane"></i></button>
+      </div>
+    </section>
+  </main>
+
+  <script src="js/navigation.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const chatLog = document.getElementById('chatLog');
+      const userMessage = document.getElementById('userMessage');
+      const sendBtn = document.getElementById('sendBtn');
+      
+      // Sample responses for demo purposes
+      const sampleResponses = [
+        "I'd recommend checking the weather forecast before packing for your trip.",
+        "For budget travel in Europe, consider visiting countries like Portugal, Hungary, or Poland.",
+        "The best time to visit Japan is during spring (March to May) for cherry blossoms or fall (September to November) for autumn colors.",
+        "Don't forget to check visa requirements at least 3 months before your international trip.",
+        "I recommend getting travel insurance that covers medical emergencies and trip cancellations.",
+        "For a family vacation, consider destinations with activities for all ages like Orlando, San Diego, or Barcelona.",
+        "Remember to notify your bank before traveling internationally to avoid card blocks.",
+        "When visiting religious sites, dress modestly with shoulders and knees covered as a sign of respect."
+      ];
+      
+      // Send message
+      function sendMessage() {
+        const message = userMessage.value.trim();
+        if (!message) return;
+        
+        // Add user message to chat
+        addMessageToChat(message, 'user');
+        userMessage.value = '';
+        
+        // Show typing indicator
+        showTypingIndicator();
+        
+        // Try to get response from API
+        fetch('http://localhost:3000/api/chatbot/message', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ message })
+        })
+        .then(response => response.json())
+        .then(data => {
+          // Remove typing indicator
+          removeTypingIndicator();
+          // Add bot response
+          addMessageToChat(data.response, 'bot');
+        })
+        .catch(error => {
+          console.error('Error getting chatbot response:', error);
+          // Remove typing indicator
+          removeTypingIndicator();
+          // Add random sample response as fallback
+          const randomResponse = sampleResponses[Math.floor(Math.random() * sampleResponses.length)];
+          addMessageToChat(randomResponse, 'bot');
+        });
+      }
+      
+      // Add message to chat
+      function addMessageToChat(message, sender) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${sender}-message`;
+        
+        const now = new Date();
+        const timeString = now.getHours() + ':' + (now.getMinutes() < 10 ? '0' : '') + now.getMinutes();
+        
+        const icon = sender === 'user' ? 'fas fa-user' : 'fas fa-robot';
+        
+        messageDiv.innerHTML = `
+          <div class="message-content">
+            <i class="${icon} message-icon"></i>
+            <div class="message-text">${message}</div>
+          </div>
+          <div class="message-time">${timeString}</div>
+        `;
+        
+        chatLog.appendChild(messageDiv);
+        
+        // Scroll to bottom
+        chatLog.scrollTop = chatLog.scrollHeight;
+      }
+      
+      // Show typing indicator
+      function showTypingIndicator() {
+        const typingDiv = document.createElement('div');
+        typingDiv.className = 'message bot-message typing-indicator';
+        typingDiv.id = 'typingIndicator';
+        
+        typingDiv.innerHTML = `
+          <div class="message-content">
+            <i class="fas fa-robot message-icon"></i>
+            <div class="message-text">
+              <span class="typing-dot"></span>
+              <span class="typing-dot"></span>
+              <span class="typing-dot"></span>
+            </div>
+          </div>
+        `;
+        
+        chatLog.appendChild(typingDiv);
+        chatLog.scrollTop = chatLog.scrollHeight;
+      }
+      
+      // Remove typing indicator
+      function removeTypingIndicator() {
+        const typingIndicator = document.getElementById('typingIndicator');
+        if (typingIndicator) {
+          typingIndicator.remove();
+        }
+      }
+      
+      // Event listeners
+      sendBtn.addEventListener('click', sendMessage);
+      
+      userMessage.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          sendMessage();
+        }
+      });
+      
+      // Focus input on load
+      userMessage.focus();
+    });
+  </script>
+</body>
+</html>

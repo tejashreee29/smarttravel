@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Transport • TravelPlan</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+  <script src="js/navigation.js"></script>
+</head>
+<body>
+  <nav class="topnav">
+    <div class="brand"><a href="dashboard.html">TravelPlan</a></div>
+    <div class="nav-actions">
+      <a href="dashboard.html">Dashboard</a>
+      <a href="index.html">Sign Out</a>
+    </div>
+  </nav>
+
+  <main class="container">
+    <header class="page-header">
+      <h1>Transportation</h1>
+      <p>Find ways to get around your destination</p>
+    </header>
+
+    <div class="search-container">
+      <div class="search-box">
+        <input type="text" id="city" placeholder="Enter city name (e.g., London, Tokyo, New York)">
+        <button onclick="getTransport()" class="btn btn-primary"><i class="fas fa-search"></i> Find Transport Options</button>
+      </div>
+    </div>
+
+    <div id="loading" class="loading-indicator" style="display: none;">
+      <i class="fas fa-spinner fa-spin"></i> Loading transport options...
+    </div>
+
+    <div id="transport-result" class="transport-result">
+      <!-- Transport options will be displayed here -->
+    </div>
+
+    <div class="popular-cities">
+      <h3><i class="fas fa-city"></i> Popular Cities</h3>
+      <div class="city-buttons">
+        <button onclick="document.getElementById('city').value='London'; getTransport()" class="btn btn-sm">London</button>
+        <button onclick="document.getElementById('city').value='Tokyo'; getTransport()" class="btn btn-sm">Tokyo</button>
+        <button onclick="document.getElementById('city').value='New York'; getTransport()" class="btn btn-sm">New York</button>
+        <button onclick="document.getElementById('city').value='Paris'; getTransport()" class="btn btn-sm">Paris</button>
+        <button onclick="document.getElementById('city').value='Barcelona'; getTransport()" class="btn btn-sm">Barcelona</button>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Connect to backend API
+      const apiBaseUrl = 'http://localhost:5001';
+      
+      // Check if backend is available
+      fetch(`${apiBaseUrl}/health`)
+        .then(response => {
+          if (response.ok) {
+            console.log('Backend API is available');
+          }
+        })
+        .catch(error => {
+          console.warn('Backend API connection failed:', error);
+        });
+    });
+
+    function getTransport() {
+      const city = document.getElementById('city').value;
+      if (!city) {
+        alert('Please enter a city name');
+        return;
+      }
+
+      const loadingIndicator = document.getElementById('loading');
+      const transportResult = document.getElementById('transport-result');
+      
+      // Show loading indicator
+      loadingIndicator.style.display = 'block';
+      transportResult.innerHTML = '';
+      
+      // API endpoint
+      const apiBaseUrl = 'http://localhost:5001';
+      
+      // Try to fetch from backend API
+      fetch(`${apiBaseUrl}/api/transport?city=${encodeURIComponent(city)}`)
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Transport data not available');
+          }
+          return response.json();
+        })
+        .then(data => {
+          displayTransportData(city, data);
+        })
+        .catch(error => {
+          console.error('Error fetching transport data:', error);
+          // Fallback to sample data if API fails
+          displaySampleTransportData(city);
+        })
+        .finally(() => {
+          // Hide loading indicator
+          loadingIndicator.style.display = 'none';
+        });
+    }
+    
+    function displayTransportData(city, data) {
+      // Display actual API data
+      // This would be implemented based on the actual API response structure
+      displaySampleTransportData(city); // Fallback for now
+    }
+    
+    function displaySampleTransportData(city) {
+      // Sample data for different cities
+      const transportData = {
+        'london': {
+          public: 'London has an extensive public transport network including the Underground (Tube), buses, and trains. The Oyster card or contactless payment is the most convenient way to pay for travel.',
+          taxi: 'Black cabs are London\'s iconic taxis. They can be hailed on the street when the yellow "TAXI" sign is lit. Uber and other ride-sharing services are also widely available.',
+          rideshare: 'Uber, Bolt, and Free Now operate in London. These can often be more affordable than black cabs, especially for longer journeys.',
+          rental: 'Car rental is available but not recommended for central London due to congestion charges and limited parking. Consider renting only if traveling to areas outside the city.'
+        },
+        'tokyo': {
+          public: 'Tokyo\'s train and subway system is one of the most efficient in the world. The JR Yamanote Line loops around central Tokyo, connecting most major areas. Consider getting a Suica or PASMO card for easy payment.',
+          taxi: 'Taxis in Tokyo are clean and reliable but expensive. Doors open automatically - don\'t try to open or close them yourself. Most drivers don\'t speak English, so have your destination written in Japanese.',
+          rideshare: 'Ride-sharing services like Uber exist but are limited in Tokyo. They typically work with existing taxi companies and offer little price advantage.',
+          rental: 'Car rental is not recommended in Tokyo due to complex road systems, expensive parking, and excellent public transportation alternatives.'
+        },
+        'new york': {
+          public: 'The New York subway system runs 24/7 and reaches most parts of the city. MetroCards can be purchased at any subway station. Buses complement the subway system for areas with less subway coverage.',
+          taxi: 'Yellow cabs are abundant in Manhattan and can be hailed on the street. Green cabs serve outer boroughs. A lit taxi number means the cab is available.',
+          rideshare: 'Uber, Lyft, and other ride-sharing services are widely available throughout New York City and may be more convenient than taxis during peak hours.',
+          rental: 'Car rental is generally unnecessary and can be a hassle due to traffic and expensive parking. Consider renting only if planning trips outside the city.'
+        }
+      };
+      
+      // Default data for cities not in our sample set
+      const defaultData = {
+        public: 'Public transportation options vary by city. Research local transit systems before your trip and consider downloading relevant transit apps.',
+        taxi: 'Taxis are available in most cities. In unfamiliar locations, it\'s often safer to use official taxi stands or have your accommodation call a reputable company.',
+        rideshare: 'Ride-sharing availability varies globally. Check which services operate in your destination and download apps before traveling.',
+        rental: 'Car rental can provide flexibility for exploring beyond city centers. Compare rates online and ensure you understand local driving regulations.'
+      };
+      
+      // Get data for the requested city or use default
+      const cityLower = city.toLowerCase();
+      const data = transportData[cityLower] || defaultData;
+      
+      // Create HTML for the transport card
+      document.getElementById('transport-result').innerHTML = `
+        <div class="transport-card">
+          <div class="transport-header">
+            <h2>Transport Options in ${city}</h2>
+          </div>
+          
+          <div class="transport-options">
+            <div class="transport-option">
+              <div class="option-icon"><i class="fas fa-subway"></i></div>
+              <div class="option-content">
+                <h3>Public Transit</h3>
+                <p>${data.public}</p>
+              </div>
+            </div>
+            
+            <div class="transport-option">
+              <div class="option-icon"><i class="fas fa-taxi"></i></div>
+              <div class="option-content">
+                <h3>Taxis</h3>
+                <p>${data.taxi}</p>
+              </div>
+            </div>
+            
+            <div class="transport-option">
+              <div class="option-icon"><i class="fas fa-mobile-alt"></i></div>
+              <div class="option-content">
+                <h3>Ride Sharing</h3>
+                <p>${data.rideshare}</p>
+              </div>
+            </div>
+            
+            <div class="transport-option">
+              <div class="option-icon"><i class="fas fa-car"></i></div>
+              <div class="option-content">
+                <h3>Car Rental</h3>
+                <p>${data.rental}</p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="transport-footer">
+            <p><i class="fas fa-info-circle"></i> Tip: Save important transport information offline before your trip.</p>
+          </div>
+        </div>
+      `;
+    }
+    
+    // Add event listener for Enter key
+    document.getElementById('city').addEventListener('keypress', function(event) {
+      if (event.key === 'Enter') {
+        getTransport();
+      }
+    });
+  </script>
+</body>
+</html>

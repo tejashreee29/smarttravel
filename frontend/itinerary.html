@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Itinerary Planner • TravelPlan</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+</head>
+<body>
+  <nav class="topnav">
+    <div class="brand"><a href="index.html">TravelPlan</a></div>
+    <div class="nav-actions">
+      <a href="dashboard.html">Dashboard</a>
+      <a href="index.html">Sign Out</a>
+    </div>
+  </nav>
+
+  <main class="container">
+    <header class="page-header">
+      <h1><i class="fas fa-route"></i> Itinerary Planner</h1>
+      <p>Plan day-by-day activities for your trip and export as PDF.</p>
+    </header>
+
+    <section class="controls itinerary-controls">
+      <input id="tripName" placeholder="Trip name (e.g., Bali getaway)" />
+      <input id="startDate" type="date" />
+      <input id="endDate" type="date" />
+      <button id="createItineraryBtn"><i class="fas fa-calendar-plus"></i> Create Itinerary</button>
+    </section>
+
+    <section id="itineraryPlan" class="card">
+      <div id="loading" class="loading-indicator" style="display: none;">Loading...</div>
+      <div id="itineraryContent">
+        <!-- itinerary schedule will appear here -->
+      </div>
+    </section>
+  </main>
+
+  <script src="js/navigation.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const tripName = document.getElementById('tripName');
+      const startDate = document.getElementById('startDate');
+      const endDate = document.getElementById('endDate');
+      const createItineraryBtn = document.getElementById('createItineraryBtn');
+      const itineraryPlan = document.getElementById('itineraryPlan');
+      const itineraryContent = document.getElementById('itineraryContent');
+      const loadingIndicator = document.getElementById('loading');
+      
+      // Set default dates (today and today + 7 days)
+      const today = new Date();
+      const nextWeek = new Date();
+      nextWeek.setDate(today.getDate() + 7);
+      
+      startDate.valueAsDate = today;
+      endDate.valueAsDate = nextWeek;
+      
+      // Create itinerary
+      function createItinerary() {
+        if (!tripName.value || !startDate.value || !endDate.value) {
+          alert('Please fill in all fields');
+          return;
+        }
+        
+        const start = new Date(startDate.value);
+        const end = new Date(endDate.value);
+        
+        if (end < start) {
+          alert('End date must be after start date');
+          return;
+        }
+        
+        loadingIndicator.style.display = 'block';
+        itineraryContent.innerHTML = '';
+        
+        const tripData = {
+          name: tripName.value,
+          startDate: startDate.value,
+          endDate: endDate.value
+        };
+        
+        // Try to fetch from API
+        fetch('http://localhost:5001/api/itinerary/generate', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(tripData)
+        })
+        .then(response => response.json())
+        .then(data => {
+          renderItinerary(data);
+          loadingIndicator.style.display = 'none';
+        })
+        .catch(error => {
+          console.error('Error generating itinerary:', error);
+          // Generate sample itinerary as fallback
+          const sampleItinerary = generateSampleItinerary(tripName.value, start, end);
+          renderItinerary(sampleItinerary);
+          loadingIndicator.style.display = 'none';
+        });
+      }
+      
+      // Generate sample itinerary data
+      function generateSampleItinerary(name, start, end) {
+        const days = [];
+        const dayCount = Math.round((end - start) / (24 * 60 * 60 * 1000)) + 1;
+        const activities = [
+          { time: '09:00', description: 'Breakfast at local café' },
+          { time: '10:30', description: 'Visit popular tourist attraction' },
+          { time: '13:00', description: 'Lunch at recommended restaurant' },
+          { time: '15:00', description: 'Explore local neighborhood' },
+          { time: '18:00', description: 'Dinner and evening entertainment' }
+        ];
+        
+        for (let i = 0; i < dayCount; i++) {
+          const currentDate = new Date(start);
+          currentDate.setDate(start.getDate() + i);
+          
+          days.push({
+            date: currentDate.toISOString().split('T')[0],
+            activities: activities.map(a => ({ ...a }))
+          });
+        }
+        
+        return {
+          name: name,
+          days: days
+        };
+      }
+      
+      // Render itinerary to page
+      function renderItinerary(itinerary) {
+        itineraryContent.innerHTML = `
+          <h2>${itinerary.name}</h2>
+          <div class="itinerary-actions">
+            <button id="exportPdfBtn"><i class="fas fa-file-pdf"></i> Export PDF</button>
+            <button id="saveItineraryBtn"><i class="fas fa-save"></i> Save</button>
+          </div>
+        `;
+        
+        itinerary.days.forEach(day => {
+          const dayDate = new Date(day.date);
+          const dayElement = document.createElement('div');
+          dayElement.className = 'itinerary-day';
+          
+          dayElement.innerHTML = `
+            <h3 class="day-header">
+              <span class="day-date" data-date="${day.date}">${dayDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</span>
+              <button class="add-activity-btn" data-date="${day.date}"><i class="fas fa-plus"></i></button>
+            </h3>
+            <ul class="activities-list" id="activities-${day.date}">
+              ${day.activities.map(activity => `
+                <li class="activity-item">
+                  <span class="activity-time">${activity.time}</span>
+                  <span class="activity-description">${activity.description}</span>
+                  <div class="activity-actions">
+                    <button class="edit-activity-btn"><i class="fas fa-edit"></i></button>
+                    <button class="delete-activity-btn"><i class="fas fa-trash"></i></button>
+                  </div>
+                </li>
+              `).join('')}
+            </ul>
+          `;
+          
+          itineraryContent.appendChild(dayElement);
+        });
+        
+        // Add event listeners for buttons
+        document.getElementById('exportPdfBtn').addEventListener('click', exportPdf);
+        document.getElementById('saveItineraryBtn').addEventListener('click', saveItinerary);
+        
+        // Add event listeners for activity buttons
+        document.querySelectorAll('.add-activity-btn').forEach(btn => {
+          btn.addEventListener('click', function() {
+            const date = this.getAttribute('data-date');
+            addActivity(date);
+          });
+        });
+        
+        document.querySelectorAll('.edit-activity-btn').forEach(btn => {
+          btn.addEventListener('click', function() {
+            const activityItem = this.closest('.activity-item');
+            editActivity(activityItem);
+          });
+        });
+        
+        document.querySelectorAll('.delete-activity-btn').forEach(btn => {
+          btn.addEventListener('click', function() {
+            const activityItem = this.closest('.activity-item');
+            deleteActivity(activityItem);
+          });
+        });
+      }
+      
+      // Add new activity
+      function addActivity(date) {
+        const time = prompt('Enter time (e.g., 14:00):', '12:00');
+        if (!time) return;
+        
+        const description = prompt('Enter activity description:', '');
+        if (!description) return;
+        
+        const activitiesList = document.getElementById(`activities-${date}`);
+        const li = document.createElement('li');
+        li.className = 'activity-item';
+        li.innerHTML = `
+          <span class="activity-time">${time}</span>
+          <span class="activity-description">${description}</span>
+          <div class="activity-actions">
+            <button class="edit-activity-btn"><i class="fas fa-edit"></i></button>
+            <button class="delete-activity-btn"><i class="fas fa-trash"></i></button>
+          </div>
+        `;
+        
+        activitiesList.appendChild(li);
+        
+        // Add event listeners
+        li.querySelector('.edit-activity-btn').addEventListener('click', function() {
+          editActivity(li);
+        });
+        
+        li.querySelector('.delete-activity-btn').addEventListener('click', function() {
+          deleteActivity(li);
+        });
+      }
+      
+      // Edit activity
+      function editActivity(activityItem) {
+        const timeSpan = activityItem.querySelector('.activity-time');
+        const descriptionSpan = activityItem.querySelector('.activity-description');
+        
+        const newTime = prompt('Edit time:', timeSpan.textContent);
+        if (!newTime) return;
+        
+        const newDescription = prompt('Edit description:', descriptionSpan.textContent);
+        if (!newDescription) return;
+        
+        timeSpan.textContent = newTime;
+        descriptionSpan.textContent = newDescription;
+      }
+      
+      // Delete activity
+      function deleteActivity(activityItem) {
+        if (confirm('Are you sure you want to delete this activity?')) {
+          activityItem.remove();
+        }
+      }
+      
+      // Export as PDF
+      function exportPdf() {
+        alert('PDF export functionality would be implemented here');
+        // In a real implementation, this would use a library like jsPDF
+      }
+      
+      // Save itinerary
+      function saveItinerary() {
+        const days = Array.from(document.querySelectorAll('.itinerary-day')).map(dayEl => {
+          const date = dayEl.querySelector('.day-date').getAttribute('data-date');
+          const activities = Array.from(dayEl.querySelectorAll('.activity-item')).map(li => ({
+            time: li.querySelector('.activity-time').textContent,
+            description: li.querySelector('.activity-description').textContent
+          }));
+          return { date, activities };
+        });
+
+        const payload = {
+          name: document.querySelector('#itineraryContent h2')?.textContent || tripName.value,
+          startDate: startDate.value,
+          endDate: endDate.value,
+          days
+        };
+
+        fetch('http://localhost:5001/api/itinerary/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        })
+        .then(r => r.json())
+        .then(resp => {
+          alert('Itinerary saved! ID: ' + resp.id);
+        })
+        .catch(() => alert('Failed to save itinerary'));
+      }
+      
+      // Event listeners
+      createItineraryBtn.addEventListener('click', createItinerary);
+    });
+  </script>
+</body>
+</html>
+

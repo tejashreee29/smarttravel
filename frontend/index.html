@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>TravelPlan - Your Smart Travel Companion</title>
+    <link rel="stylesheet" href="style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <script src="js/navigation.js"></script>
+</head>
+<body class="home-page">
+    <nav class="topnav">
+        <div class="brand">
+            <a href="index.html">TravelPlan</a>
+        </div>
+        <div class="nav-actions">
+            <a href="login.html">Sign In</a>
+            <a href="login.html">Sign Up</a>
+        </div>
+    </nav>
+    <div class="hero">
+        <div class="hero-content">
+            <h1>Plan Your Perfect Trip</h1>
+            <p>TravelPlan helps you organize every aspect of your journey with smart recommendations and tools.</p>
+            <div class="hero-buttons">
+                <a href="login.html" class="btn-primary"><i class="fas fa-compass"></i> Get Started</a>
+                <a href="#about" class="btn-secondary"><i class="fas fa-info-circle"></i> Learn More</a>
+            </div>
+        </div>
+    </div>
+    <div class="container" id="about">
+        <div class="info-card">
+            <h2><i class="fas fa-plane"></i> Why Choose TravelPlan?</h2>
+            <p>TravelPlan is your comprehensive travel companion that helps you organize every aspect of your journey. From finding the perfect destination to tracking expenses, we've got you covered.</p>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 30px; margin-top: 40px;">
+                <div class="feature-highlight">
+                    <div class="feature-icon-wrapper">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <h4>Secure & Reliable</h4>
+                    <p>Your travel data is protected with enterprise-grade security and encrypted storage</p>
+                </div>
+                <div class="feature-highlight">
+                    <div class="feature-icon-wrapper">
+                        <i class="fas fa-mobile-alt"></i>
+                    </div>
+                    <h4>Easy to Use</h4>
+                    <p>Intuitive design that makes travel planning effortless and enjoyable</p>
+                </div>
+                <div class="feature-highlight">
+                    <div class="feature-icon-wrapper">
+                        <i class="fas fa-globe"></i>
+                    </div>
+                    <h4>Global Coverage</h4>
+                    <p>Access travel information and tools for destinations worldwide</p>
+                </div>
+            </div>
+            
+            <div class="cta-section">
+                <h3>🌟 Ready to Start Your Adventure?</h3>
+                <p>Join thousands of travelers who trust TravelPlan for their journeys</p>
+                <a href="login.html" class="btn-primary cta-button">
+                    <i class="fas fa-rocket"></i> Start Planning Now
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <footer class="simple-footer">
+        <div class="footer-content">
+            <p>&copy; 2025 TravelPlan - Your Journey Starts Here ✈️</p>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Smooth scrolling for anchor links
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    document.querySelector(this.getAttribute('href')).scrollIntoView({
+                        behavior: 'smooth'
+                    });
+                });
+            });
+        });
+    </script>
+</body>
+</html>

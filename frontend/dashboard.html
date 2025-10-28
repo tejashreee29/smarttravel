@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Dashboard • TravelPlan</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+  <script src="js/navigation.js"></script>
+</head>
+<body>
+  <nav class="topnav">
+    <div class="brand"><a href="index.html">TravelPlan</a></div>
+    <div class="nav-actions">
+      <a href="dashboard.html" class="active">Dashboard</a>
+      <span id="userWelcome" style="color: #667eea; margin-right: 15px;"></span>
+      <a href="#" onclick="logout()">Sign Out</a>
+    </div>
+  </nav>
+
+  <main class="container">
+    <header class="page-header">
+      <h1>Travel Dashboard</h1>
+      <p>Access all your travel planning tools in one place.</p>
+    </header>
+
+    <section class="dashboard-grid">
+      <a href="destination.html" class="dashboard-card">
+        <i class="fas fa-map-marked-alt card-icon"></i>
+        <h3>Destinations</h3>
+        <p>Find your next adventure</p>
+      </a>
+      <a href="weather.html" class="dashboard-card">
+        <i class="fas fa-cloud-sun card-icon"></i>
+        <h3>Weather</h3>
+        <p>Check forecasts for your trip</p>
+      </a>
+      <a href="currency.html" class="dashboard-card">
+        <i class="fas fa-exchange-alt card-icon"></i>
+        <h3>Currency</h3>
+        <p>Convert between currencies</p>
+      </a>
+      <a href="language.html" class="dashboard-card">
+        <i class="fas fa-language card-icon"></i>
+        <h3>Language</h3>
+        <p>Learn essential phrases</p>
+      </a>
+      <a href="culture.html" class="dashboard-card">
+        <i class="fas fa-landmark card-icon"></i>
+        <h3>Culture</h3>
+        <p>Understand local customs</p>
+      </a>
+      <a href="transport.html" class="dashboard-card">
+        <i class="fas fa-subway card-icon"></i>
+        <h3>Transport</h3>
+        <p>Find ways to get around</p>
+      </a>
+      <a href="itinerary.html" class="dashboard-card">
+        <i class="fas fa-calendar-alt card-icon"></i>
+        <h3>Itinerary</h3>
+        <p>Plan your daily activities</p>
+      </a>
+      <a href="wallet.html" class="dashboard-card">
+        <i class="fas fa-wallet card-icon"></i>
+        <h3>Expenses</h3>
+        <p>Track your travel budget</p>
+      </a>
+      <a href="chatbot.html" class="dashboard-card">
+        <i class="fas fa-robot card-icon"></i>
+        <h3>Travel Assistant</h3>
+        <p>Get personalized help</p>
+      </a>
+    </section>
+  </main>
+
+  <script>
+    // Authentication check
+    function checkAuth() {
+      const isLoggedIn = localStorage.getItem('isLoggedIn');
+      const userName = localStorage.getItem('userName');
+      
+      if (isLoggedIn !== 'true') {
+        // User is not logged in, redirect to login page
+        document.body.innerHTML = `
+          <div class="container">
+            <div class="protected-message">
+              <h2><i class="fas fa-lock"></i> Access Restricted</h2>
+              <p>Please sign in to access your travel dashboard.</p>
+              <a href="login.html" class="btn-primary">
+                <i class="fas fa-sign-in-alt"></i> Sign In
+              </a>
+            </div>
+          </div>
+        `;
+        return false;
+      }
+      
+      // Update welcome message
+      const userWelcome = document.getElementById('userWelcome');
+      if (userWelcome && userName) {
+        userWelcome.textContent = `Welcome, ${userName}!`;
+      }
+      
+      return true;
+    }
+    
+    // Logout function
+    function logout() {
+      if (confirm('Are you sure you want to sign out?')) {
+        localStorage.removeItem('isLoggedIn');
+        localStorage.removeItem('userEmail');
+        localStorage.removeItem('userName');
+        window.location.href = 'index.html';
+      }
+    }
+    
+    // Connect to backend API
+    const apiBaseUrl = 'http://localhost:5001';
+    
+    // Common fetch function with error handling
+    async function fetchFromApi(endpoint, options = {}) {
+      try {
+        const response = await fetch(`${apiBaseUrl}${endpoint}`, options);
+        if (!response.ok) {
+          throw new Error(`API error: ${response.status}`);
+        }
+        return await response.json();
+      } catch (error) {
+        console.error('API request failed:', error);
+        return { error: error.message };
+      }
+    }
+    
+    // Check authentication when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+      checkAuth();
+    });
+  </script>
+
+  <footer>
+    <div class="container">
+      <div class="footer-content">
+        <div class="footer-section">
+          <h3>SmartTravel</h3>
+          <p>Your ultimate travel companion for planning perfect trips.</p>
+        </div>
+      <div class="footer-bottom">
+            <p>&copy; 2025 TravelPlan - Your Journey Starts Here ✈️</p>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>
+

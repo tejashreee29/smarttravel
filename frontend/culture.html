@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Culture • TravelPlan</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+  <script src="js/navigation.js"></script>
+</head>
+<body>
+  <nav class="topnav">
+    <div class="brand"><a href="dashboard.html">TravelPlan</a></div>
+    <div class="nav-actions">
+      <a href="dashboard.html">Dashboard</a>
+      <a href="index.html">Sign Out</a>
+    </div>
+  </nav>
+
+  <main class="container">
+    <header class="page-header">
+      <h1>Cultural Insights</h1>
+      <p>Learn about local customs and traditions</p>
+    </header>
+
+    <div class="search-container">
+      <div class="search-box">
+        <input type="text" id="country" placeholder="Enter country name (e.g., Japan, Italy, Mexico)">
+        <button onclick="getCulture()" class="btn btn-primary"><i class="fas fa-search"></i> Get Cultural Info</button>
+      </div>
+    </div>
+
+    <div id="loading" class="loading-indicator" style="display: none;">
+      <i class="fas fa-spinner fa-spin"></i> Loading cultural information...
+    </div>
+
+    <div id="culture-result" class="culture-result">
+      <!-- Cultural information will be displayed here -->
+    </div>
+
+    <div class="popular-countries">
+      <h3><i class="fas fa-globe-americas"></i> Popular Destinations</h3>
+      <div class="country-buttons">
+        <button onclick="document.getElementById('country').value='Japan'; getCulture()" class="btn btn-sm">Japan</button>
+        <button onclick="document.getElementById('country').value='Italy'; getCulture()" class="btn btn-sm">Italy</button>
+        <button onclick="document.getElementById('country').value='France'; getCulture()" class="btn btn-sm">France</button>
+        <button onclick="document.getElementById('country').value='Thailand'; getCulture()" class="btn btn-sm">Thailand</button>
+        <button onclick="document.getElementById('country').value='Mexico'; getCulture()" class="btn btn-sm">Mexico</button>
+        <button onclick="document.getElementById('country').value='India'; getCulture()" class="btn btn-sm">India</button>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Connect to backend API
+      const apiBaseUrl = 'http://localhost:5001';
+      
+      // Check if backend is available
+      fetch(`${apiBaseUrl}/health`)
+        .then(response => {
+          if (response.ok) {
+            console.log('Backend API is available');
+          }
+        })
+        .catch(error => {
+          console.warn('Backend API connection failed:', error);
+        });
+    });
+
+    function getCulture() {
+      const country = document.getElementById('country').value;
+      if (!country) {
+        alert('Please enter a country name');
+        return;
+      }
+
+      const loadingIndicator = document.getElementById('loading');
+      const cultureResult = document.getElementById('culture-result');
+      
+      // Show loading indicator
+      loadingIndicator.style.display = 'block';
+      cultureResult.innerHTML = '';
+      
+      // API endpoint
+      const apiBaseUrl = 'http://localhost:5001';
+      
+      // Try to fetch from backend API
+      fetch(`${apiBaseUrl}/api/culture?country=${encodeURIComponent(country)}`)
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Cultural information not available');
+          }
+          return response.json();
+        })
+        .then(data => {
+          displayCultureData(country, data);
+        })
+        .catch(error => {
+          console.warn('Falling back to sample cultural information:', error);
+          // Fallback to sample data if API fails
+          displaySampleCultureData(country);
+        })
+        .finally(() => {
+          // Hide loading indicator
+          loadingIndicator.style.display = 'none';
+        });
+    }
+    
+    function displayCultureData(country, data) {
+      // Render DB-backed data
+      const apiData = {
+        greetings: data.greetings,
+        dining: data.dining,
+        customs: data.customs,
+        taboos: data.taboos
+      };
+      document.getElementById('culture-result').innerHTML = `
+        <div class="culture-card">
+          <div class="culture-header">
+            <h2>${country}</h2>
+            <i class="fas fa-globe-${data.region || 'americas'} culture-icon"></i>
+          </div>
+          <div class="culture-section">
+            <h3><i class="fas fa-handshake"></i> Greetings & Etiquette</h3>
+            <p>${apiData.greetings}</p>
+          </div>
+          <div class="culture-section">
+            <h3><i class="fas fa-utensils"></i> Dining Customs</h3>
+            <p>${apiData.dining}</p>
+          </div>
+          <div class="culture-section">
+            <h3><i class="fas fa-users"></i> Social Customs</h3>
+            <p>${apiData.customs}</p>
+          </div>
+          <div class="culture-section">
+            <h3><i class="fas fa-exclamation-triangle"></i> Cultural Sensitivities</h3>
+            <p>${apiData.taboos}</p>
+          </div>
+          <div class="culture-footer">
+            <p><i class="fas fa-info-circle"></i> Customs may vary by region and context.</p>
+          </div>
+        </div>
+      `;
+    }
+    
+    function displaySampleCultureData(country) {
+      // Sample data for different countries
+      const cultureData = {
+        'japan': {
+          greetings: `Bowing is the common greeting in Japan. The depth and duration of the bow depends on the situation and the status of the person you're greeting.`,
+          dining: `It's polite to say "itadakimasu" before eating and "gochisosama deshita" after finishing. Slurping noodles is considered a compliment to the chef.`,
+          customs: `Remove your shoes when entering homes, temples, and some restaurants. Punctuality is highly valued, and it's considered rude to be late.`,
+          taboos: `Avoid sticking chopsticks upright in rice as this resembles funeral rituals. Tipping is not customary and can sometimes be considered rude.`
+        },
+        'italy': {
+          greetings: `Italians typically greet with a handshake, though friends often kiss on both cheeks. "Buongiorno" (good day) and "buonasera" (good evening) are common greetings.`,
+          dining: `Meals are social events that can last hours. Never rush through a meal. Cappuccino is only consumed at breakfast, never after meals.`,
+          customs: `Dress well in public, especially when visiting churches (shoulders and knees should be covered). Italians value family highly.`,
+          taboos: `Don't ask for cheese on seafood pasta. Avoid discussing money or asking personal questions about income or cost of possessions.`
+        },
+        'france': {
+          greetings: `The French typically greet with "la bise" (cheek kisses), though handshakes are common in formal settings. Always say "bonjour" when entering shops.`,
+          dining: `Wait for the host to say "bon appétit" before eating. Keep hands visible on the table, not in your lap. Bread is placed directly on the tablecloth.`,
+          customs: `Punctuality is appreciated but not strictly enforced for social gatherings. Dress well in public, especially in Paris.`,
+          taboos: `Don't speak loudly in public. Avoid discussing money, politics, or religion unless you know the person well.`
+        },
+        'thailand': {
+          greetings: `The traditional Thai greeting is the "wai" - a slight bow with palms pressed together. The higher the hands, the more respect shown.`,
+          dining: `Use a fork to push food onto a spoon, which is the main eating utensil. Chopsticks are only used for noodle dishes.`,
+          customs: `Remove shoes when entering temples and private homes. The head is considered sacred, so avoid touching someone's head.`,
+          taboos: `Never disrespect the royal family. The feet are considered the lowest part of the body, so avoid pointing with your feet or showing the soles of your feet.`
+        }
+      };
+      
+      // Default data for countries not in our sample set
+      const defaultData = {
+        greetings: `Greetings vary by region and social context. Research specific customs before your visit.`,
+        dining: `Table manners and dining customs reflect local culture and history. Observing locals can provide guidance.`,
+        customs: `Social norms and expectations differ across regions. Respect for elders and cultural sites is universally appreciated.`,
+        taboos: `Every culture has sensitive topics and behaviors. When in doubt, err on the side of modesty and restraint.`
+      };
+      
+      // Get data for the requested country or use default
+      const countryLower = country.toLowerCase();
+      const data = cultureData[countryLower] || defaultData;
+      
+      // Create HTML for the culture card
+      document.getElementById('culture-result').innerHTML = `
+        <div class="culture-card">
+          <div class="culture-header">
+            <h2>${country}</h2>
+            <i class="fas fa-globe-${getRegionIcon(country)} culture-icon"></i>
+          </div>
+          
+          <div class="culture-section">
+            <h3><i class="fas fa-handshake"></i> Greetings & Etiquette</h3>
+            <p>${data.greetings}</p>
+          </div>
+          
+          <div class="culture-section">
+            <h3><i class="fas fa-utensils"></i> Dining Customs</h3>
+            <p>${data.dining}</p>
+          </div>
+          
+          <div class="culture-section">
+            <h3><i class="fas fa-users"></i> Social Customs</h3>
+            <p>${data.customs}</p>
+          </div>
+          
+          <div class="culture-section">
+            <h3><i class="fas fa-exclamation-triangle"></i> Cultural Sensitivities</h3>
+            <p>${data.taboos}</p>
+          </div>
+          
+          <div class="culture-footer">
+            <p><i class="fas fa-info-circle"></i> This information is meant as a general guide. Customs may vary by region and context.</p>
+          </div>
+        </div>
+      `;
+    }
+    
+    function getRegionIcon(country) {
+      // Map countries to their continental regions for icon selection
+      const regions = {
+        'japan': 'asia',
+        'china': 'asia',
+        'thailand': 'asia',
+        'india': 'asia',
+        'vietnam': 'asia',
+        'italy': 'europe',
+        'france': 'europe',
+        'germany': 'europe',
+        'spain': 'europe',
+        'uk': 'europe',
+        'mexico': 'americas',
+        'brazil': 'americas',
+        'canada': 'americas',
+        'usa': 'americas',
+        'argentina': 'americas',
+        'egypt': 'africa',
+        'morocco': 'africa',
+        'south africa': 'africa',
+        'kenya': 'africa',
+        'australia': 'americas' // Font Awesome doesn't have Oceania icon
+      };
+      
+      const countryLower = country.toLowerCase();
+      return regions[countryLower] || 'americas'; // Default to americas icon
+    }
+    
+    // Add event listener for Enter key
+    document.getElementById('country').addEventListener('keypress', function(event) {
+      if (event.key === 'Enter') {
+        getCulture();
+      }
+    });
+  </script>
+</body>
+</html>

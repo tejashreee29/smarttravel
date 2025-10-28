@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Destinations • TravelPlan</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+  <script src="js/navigation.js"></script>
+  <script src="js/auth.js"></script>
+</head>
+<body>
+  <nav class="topnav">
+    <div class="brand"><a href="dashboard.html">TravelPlan</a></div>
+    <div class="nav-actions">
+      <a href="dashboard.html">Dashboard</a>
+      <a href="index.html">Sign Out</a>
+    </div>
+  </nav>
+
+  <main class="container">
+    <header class="page-header">
+      <h1>Popular Destinations</h1>
+      <p>Explore top travel destinations around the world.</p>
+    </header>
+
+    <section class="controls destination-controls">
+      <input id="searchDestination" type="text" placeholder="Search destinations..." />
+      <select id="regionFilter">
+        <option value="">All Regions</option>
+        <option value="europe">Europe</option>
+        <option value="asia">Asia</option>
+        <option value="americas">Americas</option>
+        <option value="africa">Africa</option>
+        <option value="oceania">Oceania</option>
+      </select>
+      <button id="searchBtn">Search</button>
+    </section>
+
+    <section id="destinationResults" class="destination-grid">
+      <!-- Destinations will be loaded here -->
+    </section>
+    
+    <!-- Destination Details Modal -->
+    <div id="destinationModal" class="modal" style="display:none;">
+      <div class="modal-content">
+        <button class="modal-close" id="modalCloseBtn" aria-label="Close details">&times;</button>
+        <div id="modalBody"></div>
+      </div>
+      <div class="modal-backdrop" id="modalBackdrop"></div>
+    </div>
+  </main>
+  
+  <footer>
+    <div class="container">
+      <div class="footer-content">
+        <div class="footer-section">
+          <h3>SmartTravel</h3>
+          <p>Your ultimate travel companion for planning perfect trips.</p>
+        </div>
+        <div class="footer-section">
+          <h3>Quick Links</h3>
+          <ul>
+            <li><a href="dashboard.html">Dashboard</a></li>
+            <li><a href="destination.html">Destinations</a></li>
+            <li><a href="chatbot.html">Travel Assistant</a></li>
+          </ul>
+        </div>
+        <div class="footer-section">
+          <h3>Contact</h3>
+          <p><i class="fas fa-envelope"></i> contact@smarttravel.com</p>
+          <p><i class="fas fa-phone"></i> +1 234 567 890</p>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>&copy; 2023 SmartTravel. All rights reserved.</p>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // Connect to backend API
+    const apiBaseUrl = 'http://localhost:5001';
+    
+    // Common fetch function with error handling
+    async function fetchFromApi(endpoint, options = {}) {
+        try {
+            const response = await fetch(`${apiBaseUrl}${endpoint}`, options);
+            if (!response.ok) {
+                throw new Error(`API error: ${response.status}`);
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('API request failed:', error);
+            return { error: error.message };
+        }
+    }
+
+    // Sample destination data (fallback only)
+    const sampleDestinations = [
+      {
+        id: 1,
+        name: "Paris",
+        country: "France",
+        region: "europe",
+        description: "The City of Light with iconic landmarks like the Eiffel Tower and Louvre Museum.",
+        image: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=600&q=80"
+      },
+      {
+        id: 2,
+        name: "Tokyo",
+        country: "Japan",
+        region: "asia",
+        description: "A vibrant metropolis blending ultramodern and traditional aspects of Japanese culture.",
+        image: "https://images.unsplash.com/photo-1503899036084-c55cdd92da26?w=600&q=80"
+      },
+      {
+        id: 3,
+        name: "New York",
+        country: "United States",
+        region: "americas",
+        description: "The Big Apple featuring iconic skyscrapers, Broadway shows, and Central Park.",
+        image: "https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=600&q=80"
+      },
+      {
+        id: 4,
+        name: "Cape Town",
+        country: "South Africa",
+        region: "africa",
+        description: "A stunning coastal city with Table Mountain and diverse cultural experiences.",
+        image: "https://images.unsplash.com/photo-1580060839134-75a5edca2e99?w=600&q=80"
+      },
+      {
+        id: 5,
+        name: "Sydney",
+        country: "Australia",
+        region: "oceania",
+        description: "Famous for its Opera House, harbor, and beautiful beaches.",
+        image: "https://images.unsplash.com/photo-1506973035872-a4ec16b8e8d9?w=600&q=80"
+      },
+      {
+        id: 6,
+        name: "Rome",
+        country: "Italy",
+        region: "europe",
+        description: "The Eternal City with ancient ruins, Vatican City, and delicious cuisine.",
+        image: "https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=600&q=80"
+      }
+    ];
+
+    document.addEventListener('DOMContentLoaded', function() {
+      const searchInput = document.getElementById('searchDestination');
+      const regionFilter = document.getElementById('regionFilter');
+      const searchBtn = document.getElementById('searchBtn');
+      const destinationResults = document.getElementById('destinationResults');
+      let currentDestinations = [];
+      
+      // Load destinations on page load
+      loadDestinations();
+      
+      // Add event listeners
+      searchBtn.addEventListener('click', filterDestinations);
+      regionFilter.addEventListener('change', filterDestinations);
+      searchInput.addEventListener('keyup', function(event) {
+        if (event.key === 'Enter') {
+          filterDestinations();
+        }
+      });
+      
+      // Function to load destinations
+      async function loadDestinations() {
+        destinationResults.innerHTML = '<p class="muted">Loading destinations...</p>';
+        
+        try {
+          // Try to fetch from API first
+          const apiDestinations = await fetchFromApi('/api/destinations');
+          
+          // If API call successful and has data, use it
+          if (!apiDestinations.error && apiDestinations.length > 0) {
+            currentDestinations = apiDestinations;
+            displayDestinations(currentDestinations);
+          } else {
+            // Fallback to sample data
+            currentDestinations = sampleDestinations;
+            displayDestinations(currentDestinations);
+          }
+        } catch (error) {
+          // Fallback to sample data on error
+          console.error('Error loading destinations:', error);
+          currentDestinations = sampleDestinations;
+          displayDestinations(currentDestinations);
+        }
+      }
+      
+      // Function to filter destinations
+      async function filterDestinations() {
+        const searchTerm = searchInput.value.toLowerCase().trim();
+        const regionValue = regionFilter.value.toLowerCase();
+        
+        let filteredDestinations = currentDestinations;
+        
+        // If region selected, try API region endpoint for authoritative list
+        if (regionValue) {
+          const regionData = await fetchFromApi(`/api/destinations/regions/${regionValue}`);
+          if (!regionData.error) {
+            filteredDestinations = regionData;
+          } else {
+            filteredDestinations = currentDestinations.filter(dest => dest.region.toLowerCase() === regionValue);
+          }
+        }
+        
+        // Apply search term filter if entered
+        if (searchTerm) {
+          filteredDestinations = filteredDestinations.filter(dest => 
+            dest.name.toLowerCase().includes(searchTerm) || 
+            dest.country.toLowerCase().includes(searchTerm) ||
+            dest.description.toLowerCase().includes(searchTerm)
+          );
+        }
+        
+        // Display filtered results
+        displayDestinations(filteredDestinations);
+      }
+      
+      // Function to display destinations
+      function displayDestinations(destinations) {
+        if (destinations.length === 0) {
+          destinationResults.innerHTML = '<p class="muted">No destinations found matching your criteria.</p>';
+          return;
+        }
+        
+        let html = '';
+        
+        destinations.forEach(dest => {
+          html += `
+            <div class="destination-card">
+              <div class="destination-image" style="background-image: url('${dest.image}')">
+                <div class="destination-region">${dest.region.charAt(0).toUpperCase() + dest.region.slice(1)}</div>
+              </div>
+              <div class="destination-info">
+                <h3>${dest.name}, ${dest.country}</h3>
+                <p>${dest.description}</p>
+                <button class="btn-small" onclick="viewDestination(${dest.id})">
+                  <i class="fas fa-info-circle"></i> Details
+                </button>
+              </div>
+            </div>
+          `;
+        });
+        
+        destinationResults.innerHTML = html;
+      }
+    });
+    
+    // Function to view destination details
+    async function viewDestination(id) {
+      const modal = document.getElementById('destinationModal');
+      const modalBody = document.getElementById('modalBody');
+      const closeBtn = document.getElementById('modalCloseBtn');
+      const backdrop = document.getElementById('modalBackdrop');
+
+      modalBody.innerHTML = '<p class="muted">Loading details...</p>';
+      modal.style.display = 'block';
+
+      // Fetch from API with fallback to sample list
+      let data = await fetchFromApi(`/api/destinations/${id}`);
+      if (data.error) {
+        const fallback = sampleDestinations.find(d => d.id === id);
+        if (fallback) {
+          data = fallback;
+        }
+      }
+
+      if (!data || data.error) {
+        modalBody.innerHTML = '<p class="muted">Details not available right now.</p>';
+      } else {
+        // Compose details using available fields
+        const regionLabel = data.region ? (data.region.charAt(0).toUpperCase() + data.region.slice(1)) : '—';
+        const bestTime = data.bestTime || 'Varies by season and events.';
+        const currency = data.currency || '—';
+        const language = data.language || '—';
+        const image = data.image || '';
+
+        modalBody.innerHTML = `
+            <div class="destination-detail">
+            ${image ? `<div class=\"detail-image\" style=\"background-image:url('${image}')\"></div>` : ''}
+            <h2>${data.name}, ${data.country}</h2>
+            <div class="detail-tags">
+              <span class="tag">Region: ${regionLabel}</span>
+              <span class="tag">Currency: ${currency || '—'}</span>
+              <span class="tag">Language: ${language || '—'}</span>
+            </div>
+            <p class="detail-description">${data.description || ''}</p>
+            <div class="info-card">
+              <h3><i class="fas fa-calendar-alt"></i> Best Time to Visit</h3>
+              <p>${bestTime}</p>
+              <h3><i class="fas fa-sun"></i> Season & Weather</h3>
+              <p>${data.seasonTips || 'Peak seasons often have higher prices; shoulder seasons balance weather and crowds.'}</p>
+            </div>
+
+            <div class="detail-actions" style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
+              <button class="btn-small" id="btnShowItinerary"><i class="fas fa-route"></i> Itinerary</button>
+              <button class="btn-small" id="btnShowWeather"><i class="fas fa-cloud-sun"></i> Weather</button>
+              <button class="btn-small" id="btnShowTransport"><i class="fas fa-subway"></i> Transport</button>
+            </div>
+
+            <div id="detailExtras" class="mt-4"></div>
+          </div>
+        `;
+      }
+
+      function closeModal() {
+        modal.style.display = 'none';
+      }
+      closeBtn.onclick = closeModal;
+      backdrop.onclick = closeModal;
+      document.addEventListener('keydown', function escHandler(e) {
+        if (e.key === 'Escape') { closeModal(); document.removeEventListener('keydown', escHandler); }
+      });
+
+      // Wire action buttons
+      document.getElementById('btnShowItinerary').onclick = async function() {
+        const daysInput = prompt('How many days do you want to plan? (1-21)', '3');
+        const numDays = parseInt(daysInput, 10);
+        if (!numDays || numDays < 1 || numDays > 21) { return; }
+        const start = new Date();
+        const end = new Date();
+        end.setDate(start.getDate() + (numDays - 1));
+        const payload = { name: data.name, startDate: start.toISOString().split('T')[0], endDate: end.toISOString().split('T')[0] };
+        let resp = null;
+        try {
+          const r = await fetch(`${apiBaseUrl}/api/itinerary/generate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+          if (r.ok) resp = await r.json();
+        } catch (e) { resp = null; }
+        const extras = document.getElementById('detailExtras');
+        if (!resp || resp.error) {
+          // Client-side fallback plan
+          const bank = [
+            { time: '09:00', description: 'Breakfast at a local café' },
+            { time: '10:30', description: `Explore top sights of ${data.name}` },
+            { time: '13:00', description: 'Lunch at a recommended spot' },
+            { time: '15:00', description: 'Neighborhood walk or museum' },
+            { time: '18:00', description: 'Dinner and evening activity' }
+          ];
+          const days = [];
+          for (let i = 0; i < numDays; i++) {
+            const d = new Date(start);
+            d.setDate(start.getDate() + i);
+            days.push({ date: d.toISOString().split('T')[0], activities: bank.map((it, idx) => bank[(idx + i) % bank.length]) });
+          }
+          resp = { name: data.name, days };
+        }
+        let html = `<div class="info-card"><h3><i class=\"fas fa-route\"></i> ${numDays}-Day Itinerary</h3>`;
+        resp.days.forEach(day => {
+          const d = new Date(day.date);
+          html += `<h4>${d.toLocaleDateString('en-US', { weekday:'long', month:'short', day:'numeric' })}</h4><ul>`;
+          day.activities.forEach(a => { html += `<li>${a.time} — ${a.description}</li>`; });
+          html += `</ul>`;
+        });
+        html += `</div>`;
+        extras.innerHTML = html;
+      };
+
+      document.getElementById('btnShowWeather').onclick = async function() {
+        const w = await fetch(`${apiBaseUrl}/api/weather?city=${encodeURIComponent(data.name)}`).then(r=>r.json()).catch(()=>null);
+        const extras = document.getElementById('detailExtras');
+        if (!w || w.error) { extras.innerHTML = '<p class="muted">Could not load weather.</p>'; return; }
+        let html = `<div class="weather-card"><h3>${w.city} Weather</h3><div class=\"weather-main\"><i class=\"${w.icon}\"></i><div class=\"weather-temp\">${w.temperature}°C</div></div>`;
+        html += `<div class=\"weather-details\"><div class=\"weather-detail\">${w.condition}</div><div class=\"weather-detail\">Humidity: ${w.humidity}%</div><div class=\"weather-detail\">Wind: ${w.windSpeed} km/h</div></div>`;
+        html += `</div>`;
+        extras.innerHTML = html;
+      };
+
+      document.getElementById('btnShowTransport').onclick = async function() {
+        const t = await fetch(`${apiBaseUrl}/api/transport?city=${encodeURIComponent(data.name)}`).then(r=>r.json()).catch(()=>null);
+        const extras = document.getElementById('detailExtras');
+        if (!t || t.error) { extras.innerHTML = '<p class="muted">Could not load transport info.</p>'; return; }
+        const transport = t.public ? t : { public: 'Public transport varies by city.', taxi: 'Taxis available in most cities.', rideshare: 'Check available apps locally.', rental: 'Car rental for trips beyond city center.' };
+        const html = `
+          <div class="transport-card">
+            <div class="transport-options">
+              <div class="transport-option"><div class="option-icon"><i class="fas fa-subway"></i></div><div class="option-content"><h3>Public Transit</h3><p>${transport.public}</p></div></div>
+              <div class="transport-option"><div class="option-icon"><i class="fas fa-taxi"></i></div><div class="option-content"><h3>Taxis</h3><p>${transport.taxi}</p></div></div>
+              <div class="transport-option"><div class="option-icon"><i class="fas fa-mobile-alt"></i></div><div class="option-content"><h3>Ride Sharing</h3><p>${transport.rideshare}</p></div></div>
+              <div class="transport-option"><div class="option-icon"><i class="fas fa-car"></i></div><div class="option-content"><h3>Car Rental</h3><p>${transport.rental}</p></div></div>
+            </div>
+          </div>`;
+        extras.innerHTML = html;
+      };
+    }
+  </script>
+</body>
+</html>

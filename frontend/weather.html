@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Weather • TravelPlan</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+  <script src="js/navigation.js"></script>
+  <script src="js/auth.js"></script>
+</head>
+<body>
+  <nav class="topnav">
+    <div class="brand"><a href="index.html">TravelPlan</a></div>
+    <div class="nav-actions">
+      <a href="dashboard.html">Dashboard</a>
+      <a href="index.html">Sign Out</a>
+    </div>
+  </nav>
+
+  <main class="container">
+    <header class="page-header">
+      <h1>Weather Forecast</h1>
+      <p>Check the weather for your destination</p>
+    </header>
+
+    <div class="search-container">
+      <div class="search-box">
+        <input type="text" id="city" placeholder="Enter city name">
+        <button onclick="getWeather()" class="btn btn-primary"><i class="fas fa-search"></i> Get Weather</button>
+      </div>
+    </div>
+
+    <div id="loading" class="loading-indicator" style="display: none;">
+      <i class="fas fa-spinner fa-spin"></i> Loading weather data...
+    </div>
+
+    <div id="weather-result" class="weather-result">
+      <!-- Weather data will be displayed here -->
+    </div>
+  </main>
+
+  <script>
+    // Connect to backend API
+    const apiBaseUrl = 'http://localhost:5001';
+    
+    // Common fetch function with error handling
+    async function fetchFromApi(endpoint, options = {}) {
+        try {
+            const response = await fetch(`${apiBaseUrl}${endpoint}`, options);
+            if (!response.ok) {
+                throw new Error(`API error: ${response.status}`);
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('API request failed:', error);
+            return { error: error.message };
+        }
+    }
+
+    async function getWeather() {
+        const cityInput = document.getElementById('city');
+        const weatherResult = document.getElementById('weather-result');
+        const loading = document.getElementById('loading');
+        
+        const city = cityInput.value.trim();
+        
+        if (!city) {
+            alert('Please enter a city name');
+            return;
+        }
+        
+        // Show loading state
+        loading.style.display = 'block';
+        weatherResult.innerHTML = '';
+        
+        try {
+            // Fetch weather data
+            const weather = await fetchFromApi(`/api/weather?city=${encodeURIComponent(city)}`);
+            
+            loading.style.display = 'none';
+            
+            if (weather.error) {
+                weatherResult.innerHTML = `<div class="weather-card"><p>Error: ${weather.error}</p></div>`;
+                return;
+            }
+            
+            // Display weather information
+            const forecastHtml = weather.forecast && weather.forecast.length > 0 ? 
+                `<div class="forecast-grid">
+                    ${weather.forecast.map(day => `
+                        <div class="forecast-day">
+                            <div><strong>${day.day}</strong></div>
+                            <i class="${day.icon || 'fas fa-cloud-sun'}"></i>
+                            <div>${day.high}°/${day.low}°</div>
+                            <div>${day.condition}</div>
+                        </div>
+                    `).join('')}
+                </div>` : '';
+            
+            weatherResult.innerHTML = `
+                <div class="weather-card">
+                    <h3>${weather.city}${weather.country ? ', ' + weather.country : ''}</h3>
+                    <div class="weather-main">
+                        <i class="${weather.icon || 'fas fa-cloud-sun'} weather-icon"></i>
+                        <div>
+                            <div class="weather-temp">${weather.temperature}°C</div>
+                            <div>${weather.condition}</div>
+                        </div>
+                    </div>
+                    <div class="weather-details">
+                        <div class="weather-detail">
+                            <i class="fas fa-tint"></i>
+                            <div>Humidity</div>
+                            <div><strong>${weather.humidity || '70'}%</strong></div>
+                        </div>
+                        <div class="weather-detail">
+                            <i class="fas fa-wind"></i>
+                            <div>Wind Speed</div>
+                            <div><strong>${weather.windSpeed || '10'} km/h</strong></div>
+                        </div>
+                    </div>
+                    ${forecastHtml}
+                </div>
+            `;
+        } catch (error) {
+            loading.style.display = 'none';
+            weatherResult.innerHTML = `<div class="weather-card"><p>Error fetching weather data: ${error.message}</p></div>`;
+        }
+    }
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        const cityInput = document.getElementById('city');
+        
+        // Allow pressing Enter to get weather
+        cityInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                getWeather();
+            }
+        });
+        
+        // Load popular cities on page load
+        loadPopularCities();
+    });
+    
+    async function loadPopularCities() {
+        try {
+            const cities = await fetchFromApi('/api/weather');
+            if (cities.availableCities) {
+                const weatherResult = document.getElementById('weather-result');
+                weatherResult.innerHTML = `
+                    <div class="info-card">
+                        <h3><i class="fas fa-map-marker-alt"></i> Popular Destinations</h3>
+                        <p>Click on a city to see its weather:</p>
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 15px;">
+                            ${cities.availableCities.map(city => 
+                                `<button class="btn-small" onclick="document.getElementById('city').value='${city.key}'; getWeather();">
+                                    ${city.name}
+                                </button>`
+                            ).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+        } catch (error) {
+            console.error('Error loading popular cities:', error);
+        }
+    }
+  </script>
+</body>
+</html>
